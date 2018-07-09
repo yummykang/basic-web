@@ -16,15 +16,35 @@ import lombok.extern.slf4j.Slf4j;
  * @create 2018-07-02 15:31
  */
 @Slf4j
-public class HttpServer {
+public class HttpServer extends AbstractConnector {
+    private ChannelFuture channelFuture;
+
     public static void main(String[] args) {
-        EventLoopGroup bossGroup = new NioEventLoopGroup();
-        EventLoopGroup workerGroup = new NioEventLoopGroup();
-        ServerBootstrap bootstrap = new ServerBootstrap();
-        bootstrap.group(bossGroup, workerGroup).channel(NioServerSocketChannel.class).handler(new LoggingHandler(LogLevel.INFO))
-                .childHandler(new HttpServerInitializer());
         try {
-            ChannelFuture channelFuture = bootstrap.bind(8080).sync();
+            new HttpServer().port(8080).start();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Override
+    public Connector stop() {
+        channelFuture.channel().closeFuture();
+        return this;
+    }
+
+    @Override
+    public Connector start() {
+        EventLoopGroup bossGroup = null;
+        EventLoopGroup workerGroup = null;
+        try {
+            bossGroup = new NioEventLoopGroup();
+            workerGroup = new NioEventLoopGroup();
+            ServerBootstrap bootstrap = new ServerBootstrap();
+            bootstrap.group(bossGroup, workerGroup).channel(NioServerSocketChannel.class).handler(new LoggingHandler(LogLevel.INFO))
+                    .childHandler(new HttpServerInitializer());
+            channelFuture = bootstrap.bind(getPort()).sync();
+            channelFuture.channel().closeFuture().sync();
             log.info("                       _oo0oo_\n" +
                     "                      o8888888o\n" +
                     "                      88\" . \"88\n" +
@@ -48,11 +68,11 @@ public class HttpServer {
                     "     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n" +
                     "\n" +
                     "               佛祖保佑         永无BUG");
-            channelFuture.channel().closeFuture().sync();
-        } catch (InterruptedException e) {
-            log.error("server failed start up:{}", e.getMessage());
-            bossGroup.shutdownGracefully();
+        } catch (Exception e) {
+            log.error("error happened:{}", e.getMessage());
             workerGroup.shutdownGracefully();
+            bossGroup.shutdownGracefully();
         }
+        return this;
     }
 }

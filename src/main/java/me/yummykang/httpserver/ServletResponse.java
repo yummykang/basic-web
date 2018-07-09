@@ -240,6 +240,7 @@ public class ServletResponse implements HttpServletResponse {
 
         @Override
         public void flush() throws IOException {
+            buf.retain();
             ctx.writeAndFlush(response).addListener(ChannelFutureListener.CLOSE);
         }
 
